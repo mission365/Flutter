@@ -20,11 +20,16 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
 
   void _showModel() {
+    String title = "";
+    String desc = "";
     showModalBottomSheet(
         context: context,
         builder: (BuildContext context) {
           return Container(
-            height: MediaQuery.of(context).size.height / 2,
+            height: MediaQuery
+                .of(context)
+                .size
+                .height / 2,
             color: Colors.white,
             child: Center(
               child: Column(
@@ -44,6 +49,11 @@ class _HomePageState extends State<HomePage> {
                       border: OutlineInputBorder(),
                       labelText: 'Title',
                     ),
+                    onSubmitted: (value) {
+                      setState(() {
+                        title = value;
+                      });
+                    },
                   ),
                   SizedBox(
                     height: 10,
@@ -53,8 +63,19 @@ class _HomePageState extends State<HomePage> {
                       border: OutlineInputBorder(),
                       labelText: 'Description',
                     ),
+                    onSubmitted: (value) {
+                      setState(() {
+                        desc = value;
+                      });
+                    },
                   ),
-                  ElevatedButton(onPressed: null, child: Text('Add'))
+                  ElevatedButton(
+                      onPressed: () =>
+                          postData(
+                              title: title,
+                              desc: desc
+                          ),
+                      child: Text('Add'))
                 ],
               ),
             ),
@@ -94,6 +115,33 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void postData({String title = "", String desc = ""}) async {
+    try {
+      http.Response response = await http.post(
+        Uri.parse(api),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: jsonEncode(<String, dynamic>{
+          "title": title,
+          "desc": desc,
+          "isDone": false,
+        }),
+      );
+      if (response.statusCode == 201) {
+        setState(() {
+          myTodos = [];
+        });
+        fetchData();
+      }
+      else {
+        print("Something is wrong");
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
   void delete_todo(String id) async {
     try {
       http.Response response = await http.delete(Uri.parse(api + "/" + id));
@@ -106,6 +154,33 @@ class _HomePageState extends State<HomePage> {
       print(e);
     }
   }
+
+  void updateData(String id, String title, String desc) async {
+    try {
+      http.Response response = await http.put(
+        Uri.parse('$api/$id'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({
+          "title": title,
+          "desc": desc,
+          "isDone": false, // Adjust this field as needed
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          myTodos = [];
+        });
+        fetchData();
+      } else {
+        print("Failed to update todo.");
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
 
   @override
   void initState() {
@@ -124,16 +199,19 @@ class _HomePageState extends State<HomePage> {
             isLoading
                 ? CircularProgressIndicator()
                 : Column(
-                    children: myTodos.map((e) {
-                      return TodoContainer(
-                        id: e.id,
-                        title: e.title,
-                        desc: e.desc,
-                        isDone: e.isDone,
-                        onPress: () => delete_todo(e.id.toString()),
-                      );
-                    }).toList(),
-                  ),
+              children: myTodos.map((e) {
+                return TodoContainer(
+                    id: e.id,
+                    title: e.title,
+                    desc: e.desc,
+                    isDone: e.isDone,
+                    onPress: () => delete_todo(e.id.toString()),
+                    onUpdate: (id, updatedTitle, updatedDesc) {
+                      updateData(id, updatedTitle, updatedDesc);
+                    }
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
@@ -146,3 +224,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: customAppBar(),
+//       body: SingleChildScrollView(
+//         scrollDirection: Axis.vertical,
+//         child: Column(
+//           children: [
+//             isLoading
+//                 ? Center(child: CircularProgressIndicator())
+//                 : ListView.builder(
+//               itemCount: myTodos.length,
+//               itemBuilder: (context, index) {
+//                 Todo todo = myTodos[index];
+//                 return TodoContainer(
+//                   id: todo.id,
+//                   title: todo.title,
+//                   desc: todo.desc,
+//                   isDone: todo.isDone,
+//                   onPress: () => delete_todo(todo.id.toString()),
+//                   onUpdate: (id, updatedTitle, updatedDesc) {
+//                   updateData(id, updatedTitle, updatedDesc); // Call update function
+//                 },
+//                 );
+//               },
+//             ),
+//           ],
+//         ),
+//       ),
+//       floatingActionButton: FloatingActionButton(
+//         onPressed: () {
+//           _showModel();
+//         },
+//         child: Icon(Icons.add),
+//       ),
+//     );
+//   }
+//
+// }
